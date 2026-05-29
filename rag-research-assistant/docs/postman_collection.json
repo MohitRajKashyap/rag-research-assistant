@@ -1,0 +1,175 @@
+{
+  "info": {
+    "name": "RAG Research Assistant API",
+    "description": "Complete API collection for the RAG Research Assistant",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000/api/v1" },
+    { "key": "access_token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signup",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/signup",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"test@example.com\", \"username\": \"testuser\", \"password\": \"TestPass123\", \"full_name\": \"Test User\"}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["const r = pm.response.json(); pm.collectionVariables.set('access_token', r.access_token);"]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/login",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"admin@example.com\", \"password\": \"Admin@123!\"}"
+            }
+          }
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/auth/me",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Upload Document",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/documents/upload",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "files", "type": "file", "src": "/path/to/document.pdf" }]
+            }
+          }
+        },
+        {
+          "name": "List Documents",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/documents/?page=1&page_size=20", "query": [{ "key": "page", "value": "1" }, { "key": "page_size", "value": "20" }] },
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        },
+        {
+          "name": "Semantic Search",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/documents/search",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\": \"What is the transformer attention mechanism?\", \"top_k\": 5}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "item": [
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/chat/",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"message\": \"Explain the self-attention mechanism in transformers\", \"top_k\": 5}"
+            }
+          }
+        },
+        {
+          "name": "Stream Chat (SSE)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/chat/stream",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Accept", "value": "text/event-stream" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"message\": \"What are the main contributions of the RAG paper?\", \"top_k\": 5, \"stream\": true}"
+            }
+          }
+        },
+        {
+          "name": "List Conversations",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/chat/conversations",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "System Metrics",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/admin/metrics",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/admin/users",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/health"
+          }
+        }
+      ]
+    }
+  ]
+}

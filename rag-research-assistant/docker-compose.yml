@@ -1,0 +1,154 @@
+version: '3.9'
+
+# ============================================================
+# RAG Research Assistant — Full Docker Compose Stack
+# Services: postgres, redis, backend, celery, frontend, nginx
+# ============================================================
+
+services:
+  # ---- PostgreSQL ----
+  postgres:
+    image: postgres:16-alpine
+    container_name: rag_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: raguser
+      POSTGRES_PASSWORD: ragpassword
+      POSTGRES_DB: ragdb
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U raguser -d ragdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rag_network
+
+  # ---- Redis ----
+  redis:
+    image: redis:7-alpine
+    container_name: rag_redis
+    restart: unless-stopped
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - rag_network
+
+  # ---- Backend API ----
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rag_backend
+    restart: unless-stopped
+    env_file: ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://raguser:ragpassword@postgres:5432/ragdb
+      - DATABASE_URL_SYNC=postgresql://raguser:ragpassword@postgres:5432/ragdb
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/2
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    volumes:
+      - uploads_data:/app/data/uploads
+      - faiss_data:/app/data/faiss_index
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - rag_network
+
+  # ---- Celery Worker ----
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rag_celery
+    restart: unless-stopped
+    command: celery -A app.workers.tasks.celery_app worker --loglevel=info --concurrency=2 -Q celery
+    env_file: ./backend/.env
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://raguser:ragpassword@postgres:5432/ragdb
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/2
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    volumes:
+      - uploads_data:/app/data/uploads
+      - faiss_data:/app/data/faiss_index
+    depends_on:
+      - backend
+      - redis
+    networks:
+      - rag_network
+
+  # ---- Celery Flower (monitoring) ----
+  flower:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rag_flower
+    restart: unless-stopped
+    command: celery -A app.workers.tasks.celery_app flower --port=5555 --basic_auth=admin:flowerpass
+    env_file: ./backend/.env
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/2
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+    networks:
+      - rag_network
+
+  # ---- Frontend ----
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rag_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    networks:
+      - rag_network
+
+  # ---- Nginx reverse proxy ----
+  nginx:
+    image: nginx:alpine
+    container_name: rag_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - rag_network
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:
+  faiss_data:
+
+networks:
+  rag_network:
+    driver: bridge

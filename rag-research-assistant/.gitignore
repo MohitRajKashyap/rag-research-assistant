@@ -1,0 +1,54 @@
+# ============================================================
+# .gitignore — RAG Research Assistant
+# ============================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+.env
+!.env.example
+*.pyc
+
+# Testing / Coverage
+.pytest_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.log
+
+# Data (never commit uploads or vector indexes)
+backend/data/
+data/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+!frontend/.env.example
+
+# Docker
+*.env.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# SSL certs
+nginx/ssl/
+*.pem
+*.key
+*.crt
