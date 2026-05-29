@@ -2,7 +2,7 @@
 
 > **Enterprise-grade AI Research Assistant** — Upload documents, ask questions, get cited answers powered by Retrieval-Augmented Generation.
 
-[![CI](https://github.com/yourusername/rag-research-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/rag-research-assistant/actions)
+[![CI](https://github.com/MohitRajKashyap/rag-research-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/yourusername/rag-research-assistant/actions)
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.111-green.svg)](https://fastapi.tiangolo.com)
 [![React](https://img.shields.io/badge/React-18-blue.svg)](https://reactjs.org)
@@ -435,39 +435,6 @@ open htmlcov/index.html
 5. **SSE streaming** — First token in ~200ms, full response streams progressively
 6. **FAISS flat index** — In-memory cosine search <5ms for 100K vectors
 7. **Celery workers** — Document ingestion never blocks the API server
-
----
-
-## Resume Description
-
-> **RAG Research Assistant** | Python · FastAPI · LangChain · OpenAI · React · PostgreSQL · Redis · Docker
->
-> Built an enterprise-grade AI research platform that ingests 1000+ research documents and answers natural-language queries with cited, hallucination-reduced responses using Retrieval-Augmented Generation (RAG). Designed and implemented a full async pipeline: documents are chunked, embedded via OpenAI's text-embedding-3-small, and stored in a FAISS vector index. At query time, top-k semantically similar chunks are retrieved, re-ranked, and injected into a GPT-4 prompt to generate cited answers. Key achievements: (1) streaming chat responses via Server-Sent Events with sub-200ms time-to-first-token; (2) background document ingestion via Celery reducing API latency by 10×; (3) Redis caching achieving 40% cache hit rate; (4) JWT authentication with role-based access control; (5) full CI/CD pipeline with GitHub Actions, Docker, and Nginx. Supports 2500+ daily requests at p95 <1.4s.
-
----
-
-## Interview Q&A
-
-**Q: How does your RAG pipeline handle hallucinations?**
-> The system prompt explicitly instructs GPT-4 to answer only from provided context, acknowledge missing information, and cite sources. Retrieval quality is enforced by a cosine similarity threshold (0.7), ensuring only highly relevant chunks are included. I also track faithfulness scores using RAGAS metrics.
-
-**Q: How do you handle large documents that exceed the context window?**
-> Documents are chunked into 1000-token segments with 200-token overlap during ingestion. Only the top-k most relevant chunks (k=5 default) are included in the prompt, and total context is capped at 4000 characters. Context compression can be added with LLMLingua if needed.
-
-**Q: Why FAISS over Pinecone?**
-> FAISS is free, self-hosted, and fast enough for <1M vectors on a single node. I abstracted the vector store behind an interface (`VectorStoreBase`) so Pinecone or Weaviate can be swapped in without changing the RAG pipeline—just set `VECTOR_STORE_TYPE=chroma`.
-
-**Q: How does streaming work?**
-> The frontend calls `/chat/stream` which returns `Content-Type: text/event-stream`. The FastAPI endpoint yields Server-Sent Events as OpenAI streams tokens. The React frontend reads the SSE stream and appends tokens to the UI in real time. Nginx is configured with `proxy_buffering off` to prevent buffering the stream.
-
-**Q: How do you scale this to handle more load?**
-> Horizontal scaling: run multiple FastAPI instances behind Nginx with shared PostgreSQL and Redis. Celery workers can be scaled independently. For the vector store, migrate from FAISS to Pinecone or a distributed FAISS cluster. Add read replicas to PostgreSQL for query load.
-
-**Q: How do you prevent one user from accessing another's documents?**
-> All document queries include `owner_id = current_user.id` filters. Vector store metadata also stores `owner_id`, which is applied as a filter during similarity search. JWT tokens are validated on every request.
-
-**Q: Walk me through a document upload end-to-end.**
-> 1. Client POSTs multipart form to `/documents/upload`. 2. FastAPI validates file type and size, computes SHA-256 hash for deduplication. 3. File saved to disk. 4. DB record created with status=PENDING. 5. Celery task dispatched (returns 202 Accepted immediately). 6. Worker parses the file, chunks text, calls OpenAI embeddings API in batches of 100. 7. Vectors upserted to FAISS; chunk records saved to PostgreSQL. 8. Document status updated to INDEXED. Client can poll `/documents/{id}/status` to check progress.
 
 ---
 
